@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Minimal Sling Rocket: Physics Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css">
+    <style>
+        :root {
+            --font-main: 'DotGothic16', 'Galmuri9', monospace;
+            --bg: #000;
+            --fg: #fff;
+            --faint: rgba(255, 255, 255, 0.15);
+            --ghost: rgba(255, 255, 255, 0.2);
+        }
+
+        body.inverted {
+            --bg: #fff;
+            --fg: #000;
+            --faint: rgba(0, 0, 0, 0.1);
+            --ghost: rgba(0, 0, 0, 0.1);
+        }
+
+        body.retro {
+            --bg: #2b301a;
+            --fg: #d9e0bd;
+            --faint: rgba(217, 224, 189, 0.15);
+            --ghost: rgba(217, 224, 189, 0.2);
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: var(--bg);
+            font-family: var(--font-main);
+            color: var(--fg);
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none; /* Запрещает системные жесты на телефонах */
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        canvas { display: block; width: 100vw; height: 100vh; }
+
+        #ui {
+            position: absolute; top: 15px; left: 0; width: 100%;
+            display: flex; flex-direction: row; justify-content: center; align-items: center;
+            gap: 12px; pointer-events: none; z-index: 10; font-size: 12px; letter-spacing: 1px;
+            padding: 0 10px; box-sizing: border-box;
+        }
+        
+        #ui div { white-space: nowrap; }
+
+        #ingame-controls { position: absolute; top: 45px; right: 20px; z-index: 20; }
+
+        #rope-alert {
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 32px; letter-spacing: 5px; text-align: center;
+            pointer-events: none; z-index: 50; text-transform: uppercase;
+        }
+
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: var(--bg); z-index: 100; text-align: center;
+            padding: 20px; box-sizing: border-box; overflow-y: auto;
+        }
+
+        h1 { font-weight: normal; letter-spacing: 12px; margin-bottom: 5px; text-transform: uppercase; }
+        #menu-best-container { font-size: 18px; letter-spacing: 4px; margin-bottom: 40px; opacity: 0.8; }
+
+        button {
+            background: transparent; border: 1px solid var(--fg);
+            color: var(--fg); height: 54px; display: flex; align-items: center; justify-content: center;
+            line-height: 1; padding: 0; margin: 6px 0;
+            font-family: var(--font-main); font-size: 15px; cursor: pointer;
+            text-transform: uppercase; transition: 0.2s; letter-spacing: 2px;
+            width: 320px; max-width: 90vw; box-sizing: border-box; position: relative;
+        }
+
+        button:active { background: var(--faint); }
+        button:disabled { opacity: 0.3; cursor: default; }
+
+        .btn-small { width: auto; height: 38px; padding: 0 15px; font-size: 14px; pointer-events: auto; display: inline-flex; margin: 0; }
+        .hidden { display: none !important; }
+        
+        .settings-row { 
+            margin: 15px 0; border-top: 1px solid var(--faint); padding-top: 15px; 
+            width: 320px; max-width: 90vw; display: flex; flex-direction: column; align-items: center;
+        }
+        .settings-label { font-size: 12px; opacity: 0.6; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 3px; }
+        #stats-panel { margin-top: 20px; opacity: 0.5; font-size: 12px; letter-spacing: 3px; }
+
+        .lang-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; width: 100%; }
+        .lang-grid button { width: 100%; height: 40px; font-size: 11px; margin: 0; }
+        
+        .btn-group-theme { display: flex; gap: 5px; width: 100%; }
+        .btn-group-theme button { width: 100%; height: 44px; margin: 0; font-size: 12px; }
+    </style>
+</head>
+<body id="game-body">
+
+    <div id="ui">
+        <div id="ui-hi">HI:0000</div>
+        <div id="ui-cur">CUR:0000</div>
+        <div id="ui-cred">CRED:0000</div>
+        <div id="ui-vel">VEL:0.00</div>
+    </div>
+
+    <div id="rope-alert" class="hidden">BROKEN 3.0</div>
+
+    <div id="ingame-controls" class="hidden">
+        <button class="btn-small" onclick="pauseToMenu()" id="btn-pause">// MENU</button>
+    </div>
+
+    <div id="menu" class="screen">
+        <h1 id="menu-title">SLING<br>ROCKET</h1>
+        <div id="menu-best-container">BEST: 0000</div>
+        <button id="resume-btn" class="hidden" onclick="resumeGame()">RESUME</button>
+        <button onclick="startGame()" id="btn-launch">LAUNCH</button>
+        <button onclick="showMods()" id="btn-menu-mods">MODS</button>
+        <button onclick="showSystems()" id="btn-menu-systems">SYSTEMS</button>
+        <div id="stats-panel">MASS-VELOCITY ENGINE v7.0</div>
+    </div>
+
+    <div id="mods-screen" class="screen hidden">
+        <h1 id="mods-title">MODS</h1>
+        <div id="garage-info" style="margin-bottom: 10px; line-height: 1.4; font-size: 13px;"></div>
+        <button onclick="upgrade('mass')" id="btn-up-mass">MASS [100]</button>
+        <button onclick="upgrade('ropeTension')" id="btn-up-ropeTension">TENSILE [50]</button>
+        <button onclick="toggleOrBuy('borders')" id="btn-up-borders">BORDERS [25]</button>
+        <button onclick="toggleOrBuy('bounce')" id="btn-up-bounce">PINBALL [10]</button>
+        <button onclick="toggleOrBuy('rope5')" id="btn-up-rope5">+5M [25]</button>
+        <button onclick="toggleOrBuy('rope10')" id="btn-up-rope10">+10M [50]</button>
+        <button onclick="showMenu()" id="btn-up-back" style="margin-top: 15px; border-color: var(--faint);">BACK</button>
+    </div>
+
+    <div id="systems-screen" class="screen hidden">
+        <h1 id="systems-title">SYSTEMS</h1>
+        <div class="settings-row" style="border-top:none;">
+            <div class="settings-label" id="lbl-theme">Appearance</div>
+            <div class="btn-group-theme">
+                <button onclick="setInvert(false)">DARK</button>
+                <button onclick="setInvert(true)">LIGHT</button>
+                <button onclick="setRetro()" id="btn-toggle-retro">RETRO</button>
+            </div>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label" id="lbl-lang">Language</div>
+            <div class="lang-grid">
+                <button onclick="setLanguage('en')">EN</button>
+                <button onclick="setLanguage('ru')">RU</button>
+                <button onclick="setLanguage('de')">DE</button>
+                <button onclick="setLanguage('fr')">FR</button>
+                <button onclick="setLanguage('es')">ES</button>
+                <button onclick="setLanguage('it')">IT</button>
+                <button onclick="setLanguage('pt')">PT</button>
+                <button onclick="setLanguage('pl')">PL</button>
+                <button onclick="setLanguage('nl')">NL</button>
+                <button onclick="setLanguage('zh')">ZH</button>
+                <button onclick="setLanguage('ja')">JA</button>
+                <button onclick="setLanguage('ko')">KO</button>
+            </div>
+        </div>
+        <button onclick="showMenu()" id="btn-sys-back" style="margin-top: 20px; border-color: var(--faint);">BACK</button>
+    </div>
+
+    <div id="game-over" class="screen hidden">
+        <h1 id="over-title">// CRASHED</h1>
+        <div id="death-reason" style="margin-bottom: 10px; opacity: 0.7;">GROUND IMPACT</div>
+        <div id="final-score" style="margin-bottom: 30px; letter-spacing: 2px;"></div>
+        <button onclick="startGame()" id="btn-reboot">REBOOT</button>
+        <button onclick="showMenu()" id="btn-over-menu" style="border-color: var(--faint); margin-top: 10px;">MENU</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const i18n = {
+        en: { hi: "HI", best: "BEST", cur: "CUR", cred: "CRED", vel: "VEL", menu: "MENU", resume: "RESUME", launch: "LAUNCH", systems: "SYSTEMS", mods: "MODS", upMass: "MASS [100]", upRope: "TENSILE [50]", upBorders: "BORDERS [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "BACK", reboot: "REBOOT", crashed: "// CRASHED", impact: "GROUND IMPACT", collision: "STRUCTURAL FAILURE", altitude: "ALTITUDE LOST", appearance: "Appearance", language: "Language", balance: "BALANCE", mass: "SHIP MASS", rope: "TENSILE", lvl: "LVL", broken: "BROKEN" },
+        ru: { hi: "РЕК", best: "РЕКОРД", cur: "ТЕК", cred: "КРЕД", vel: "СКОР", menu: "МЕНЮ", resume: "ПРОДОЛЖИТЬ", launch: "ЗАПУСК", systems: "СИСТЕМЫ", mods: "МОДЫ", upMass: "ВЕС [100]", upRope: "ТРОС [50]", upBorders: "ГРАНИЦЫ [25]", upBounce: "ПИНБОЛ [10]", upRetro: "RETRO", upRope5: "+5М [25]", upRope10: "+10М [50]", back: "НАЗАД", reboot: "ПЕРЕЗАПУСК", crashed: "// ОТКАЗ", impact: "УДАР О ЗЕМЛЮ", collision: "РАЗРУШЕНИЕ КОРПУСА", altitude: "ПОТЕРЯ ВЫСОТЫ", appearance: "ВИД", language: "ЯЗЫК", balance: "БАЛАНС", mass: "МАССА", rope: "НАТЯЖЕНИЕ", lvl: "УР", broken: "ОБРЫВ" },
+        de: { hi: "BEST", best: "BESTLEISTUNG", cur: "AKT", cred: "KRED", vel: "GESCHW", menu: "MENÜ", resume: "WEITER", launch: "START", systems: "SYSTEME", mods: "MODS", upMass: "MASSE [100]", upRope: "ZUG [50]", upBorders: "RAND [25]", upBounce: "FLIPPER [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "ZURÜCK", reboot: "REBOOT", crashed: "// ABSTURZ", impact: "BODENKONTAKT", collision: "KOLLISIONSSCHADEN", altitude: "HÖHENVERLUST", appearance: "OPTIK", language: "SPRACHE", balance: "KONTO", mass: "MASSE", rope: "SEILЗUG", lvl: "ST", broken: "GEBROCHEN" },
+        fr: { hi: "REC", best: "RECORD", cur: "ACT", cred: "CRED", vel: "VIT", menu: "MENU", resume: "REPRENDRE", launch: "LANCER", systems: "SYSTÈMES", mods: "MODS", upMass: "MASSE [100]", upRope: "TENSION [50]", upBorders: "BORD [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "RETOUR", reboot: "REBOOT", crashed: "// ÉCHEC", impact: "IMPACT AU SOL", collision: "DÉFAUT STRUCTUREL", altitude: "PERTE D'ALTITUDE", appearance: "Apparence", language: "Langue", balance: "SOLDE", mass: "MASSE", rope: "TENSION", lvl: "NIV", broken: "ROMPU" },
+        es: { hi: "REC", best: "RÉCORD", cur: "ACT", cred: "CRED", vel: "VEL", menu: "MENÚ", resume: "REANUDAR", launch: "LANZAR", systems: "SISTEMAS", mods: "MODS", upMass: "MASA [100]", upRope: "TENSIÓN [50]", upBorders: "BORDE [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5 METROS [25]", upRope10: "+10 METROS [50]", back: "VOLVER", reboot: "REINICIO", crashed: "// FALLO", impact: "IMPACTO SUELO", collision: "FALLA ESTRUCTURAL", altitude: "PÉRDIDA ALTURA", appearance: "Apariencia", language: "Idioma", balance: "SALDO", mass: "MASA", rope: "TENSIÓN", lvl: "NIV", broken: "ROTO" },
+        it: { hi: "REC", best: "RECORD", cur: "ATT", cred: "CRED", vel: "VEL", menu: "MENU", resume: "RIPRENDI", launch: "LANCIA", systems: "SISTEMI", mods: "MODS", upMass: "MASSA [100]", upRope: "TENSIO [50]", upBorders: "BORDI [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "INDIETRO", reboot: "REBOOT", crashed: "// GUASTO", impact: "IMPATTO SUOLO", collision: "DANNO STRUTTURA", altitude: "PERDITA QUOTA", appearance: "Aspetto", language: "Lingua", balance: "CONTO", mass: "MASSA", rope: "TENSIONE", lvl: "LIV", broken: "ROTTO" },
+        pt: { hi: "REC", best: "RECORDE", cur: "ATU", cred: "CRED", vel: "VEL", menu: "MENU", resume: "RETOMAR", launch: "LANÇAR", systems: "SISTEMAS", mods: "MODS", upMass: "MASSA [100]", upRope: "TENSÃO [50]", upBorders: "BORDA [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "VOLTAR", reboot: "REBOOT", crashed: "// FALHA", impact: "IMPACTO SOLO", collision: "FALHA ESTRUTURAL", altitude: "PERDA ALTITUDE", appearance: "Aparência", language: "Idioma", balance: "SALDO", mass: "MASSA", rope: "TENSÃO", lvl: "NÍV", broken: "QUEBRADO" },
+        pl: { hi: "REK", best: "NAJLEPSZY", cur: "AKT", cred: "KRED", vel: "PRĘD", menu: "MENU", resume: "WZNAWIAJ", launch: "START", systems: "SYSTEMY", mods: "MODY", upMass: "MASA [100]", upRope: "LINA [50]", upBorders: "GRANICE [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "POWRÓT", reboot: "REBOOT", crashed: "// AWARIA", impact: "ZDERZENIE Z ZIEMIĄ", collision: "USZKODZENIE STRUKTURY", altitude: "UTRATA WYSOKOŚCI", appearance: "Wygląd", language: "Język", balance: "SALDO", mass: "MASA", rope: "NAPIĘCIE", lvl: "POZ", broken: "ZERWANA" },
+        nl: { hi: "REC", best: "BESTE", cur: "HUI", cred: "CRED", vel: "SNEL", menu: "MENU", resume: "HERVATTEN", launch: "STARTEN", systems: "SYSTEMEN", mods: "MODS", upMass: "MASSA [100]", upRope: "TOUW [50]", upBorders: "GRENS [25]", upBounce: "PINBALL EFFECT [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "TERUG", reboot: "REBOOT", crashed: "// CRASH", impact: "BODEM IMPACT", collision: "STRUCTURALE FOUT", altitude: "HOOGTE VERLIES", appearance: "Uiterlijk", language: "Taal", balance: "SALDO", mass: "MASSA", rope: "SPANNING", lvl: "NIV", broken: "GEBROKEN" },
+        zh: { hi: "纪录", best: "最高纪录", cur: "当前", cred: "积分", vel: "速度", menu: "菜单", resume: "继续", launch: "发射", systems: "系统", mods: "模组", upMass: "质量 [100]", upRope: "绳索 [50]", upBorders: "边框 [25]", upBounce: "弹球 [10]", upRetro: "RETRO", upRope5: "+5米 [25]", upRope10: "+10米 [50]", back: "返回", reboot: "重启", crashed: "// 崩溃", impact: "撞击地面", collision: "结构损坏", altitude: "高度丢失", appearance: "外观", language: "语言", balance: "余额", mass: "质量", rope: "张力", lvl: "等级", broken: "断裂" },
+        ja: { hi: "記録", best: "ベスト", cur: "現在", cred: "クレジット", vel: "速度", menu: "メニュー", resume: "再開", launch: "発射", systems: "システム", mods: "モッド", upMass: "質量 [100]", upRope: "ロープ [50]", upBorders: "シールド [25]", upBounce: "ピンボール [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "戻る", reboot: "再起動", crashed: "// 故障", impact: "地面衝突", collision: "構造的欠陥", altitude: "高度低下", appearance: "外見", language: "言語", balance: "残高", mass: "質量", rope: "張力", lvl: "レベル", broken: "切断" },
+        ko: { hi: "최고", best: "최고 기록", cur: "현재", cred: "크레딧", vel: "속도", menu: "메뉴", resume: "계속하기", launch: "발사", systems: "시스템", mods: "모드", upMass: "질량 [100]", upRope: "로프 [50]", upBorders: "경계 [25]", upBounce: "핀볼 [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "뒤로", reboot: "재부팅", crashed: "// 실패", impact: "지면 충돌", collision: "구조적 손상", altitude: "고도 상활", appearance: "외형", language: "언어", balance: "잔액", mass: "질량", rope: "장력", lvl: "레벨", broken: "끊어짐" }
+    };
+
+    const firebaseConfig = JSON.parse(__firebase_config);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'sling-rocket-minimal';
+    let userId = null;
+
+    const initAuth = async () => {
+        try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        } catch (e) { console.error("Auth failed:", e); }
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            userId = user.uid;
+            // RULE 1: Strict path artifacts/{appId}/users/{userId}/gameData
+            const docRef = doc(db, 'artifacts', appId, 'users', userId, 'gameData', 'stats');
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                Object.assign(meta, data);
+                updateUIStrings();
+                updateGarageUI();
+                updateMenuBest();
+                applyTheme();
+            }
+        }
+    });
+
+    initAuth();
+
+    async function saveStats() {
+        if (!userId) return;
+        try {
+            const docRef = doc(db, 'artifacts', appId, 'users', userId, 'gameData', 'stats');
+            await setDoc(docRef, meta, { merge: true });
+        } catch (e) { console.error("Save failed:", e); }
+    }
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height, gameActive = false, cameraY = 0, score = 0, lastTime = 0, startY = 0, canResume = false, screenShake = 0;
+
+    window.meta = { 
+        highScore: 0, credits: 0, massLevel: 1, ropeLevel: 1, 
+        hasBorders: false, hasRope5: false, hasRope10: false, hasBounce: false,
+        bordersActive: false, rope5Active: false, rope10Active: false, bounceActive: false, 
+        retroActive: false, language: 'en', inverted: false 
+    };
+
+    let player = { x: 0, y: 0, vx: 0, vy: 0, mass: 1.0, angle: 0, attached: false, target: null, holdTime: 0, cooldownTime: 0 };
+    let objects = [], coins = [], fxParticles = [];
+
+    const BASE_RANGE = 220, AIR_RESISTANCE = 0.998, GRAVITY_CONSTANT = 0.02, VELOCITY_MULTIPLIER = 1.008, ROPE_HOLD_LIMIT = 3000, ROPE_COOLDOWN = 3000;   
+
+    window.setLanguage = function(l) { meta.language = l; updateUIStrings(); updateGarageUI(); updateMenuBest(); saveStats(); }
+    window.setInvert = function(val) { meta.inverted = val; applyTheme(); saveStats(); }
+    window.setRetro = function() { meta.retroActive = !meta.retroActive; applyTheme(); updateUIStrings(); saveStats(); }
+    
+    function applyTheme() {
+        const body = document.getElementById('game-body');
+        body.classList.remove('inverted', 'retro');
+        if (meta.inverted) body.classList.add('inverted');
+        if (meta.retroActive) body.classList.add('retro');
+    }
+
+    function updateUIStrings() {
+        const t = i18n[meta.language];
+        const ids = { 'btn-pause': `// ${t.menu}`, 'resume-btn': t.resume, 'btn-launch': t.launch, 'btn-menu-mods': t.mods, 'btn-menu-systems': t.systems, 'btn-up-mass': t.upMass, 'btn-up-ropeTension': t.upRope, 'btn-up-back': t.back, 'btn-sys-back': t.back, 'btn-reboot': t.reboot, 'btn-over-menu': t.menu, 'over-title': t.crashed, 'mods-title': t.mods, 'systems-title': t.systems, 'lbl-theme': t.appearance, 'lbl-lang': t.language };
+        for (const [id, text] of Object.entries(ids)) { const el = document.getElementById(id); if(el) el.innerText = text; }
+        setupToggleButton('borders', 'btn-up-borders', t.upBorders);
+        setupToggleButton('rope5', 'btn-up-rope5', t.upRope5);
+        setupToggleButton('rope10', 'btn-up-rope10', t.upRope10);
+        setupToggleButton('bounce', 'btn-up-bounce', t.upBounce);
+        const retroBtn = document.getElementById('btn-toggle-retro'); if(retroBtn) retroBtn.innerText = t.upRetro;
+    }
+
+    function setupToggleButton(key, btnId, originalText) {
+        const has = meta['has' + key.charAt(0).toUpperCase() + key.slice(1)];
+        const btn = document.getElementById(btnId);
+        if (btn) btn.innerText = has ? originalText.split('[')[0].trim() : originalText;
+    }
+
+    function updateMenuBest() { const t = i18n[meta.language]; const el = document.getElementById('menu-best-container'); if(el) el.innerText = `${t.best}: ${meta.highScore.toString().padStart(4, '0')}`; }
+    function updateGarageUI() { const t = i18n[meta.language]; const el = document.getElementById('garage-info'); if(el) el.innerText = `${t.balance}: ${Math.floor(meta.credits)}\n${t.mass}: ${(1.2 - meta.massLevel * 0.1).toFixed(2)}t\n${t.rope} ${t.lvl}: ${meta.ropeLevel}`; }
+
+    function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+    
+    window.showMenu = function() { gameActive = false; document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); document.getElementById('ingame-controls').classList.add('hidden'); document.getElementById('menu').classList.remove('hidden'); document.getElementById('rope-alert').classList.add('hidden'); const r = document.getElementById('resume-btn'); if(canResume && r) r.classList.remove('hidden'); updateMenuBest(); }
+    window.showMods = function() { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); document.getElementById('mods-screen').classList.remove('hidden'); updateGarageUI(); updateUIStrings(); }
+    window.showSystems = function() { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); document.getElementById('systems-screen').classList.remove('hidden'); updateUIStrings(); }
+    window.pauseToMenu = function() { canResume = true; showMenu(); }
+    window.resumeGame = function() { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); document.getElementById('ingame-controls').classList.remove('hidden'); gameActive = true; }
+
+    window.toggleOrBuy = function(key) {
+        const hasKey = 'has' + key.charAt(0).toUpperCase() + key.slice(1);
+        const activeKey = key + 'Active';
+        const costs = { borders: 25, rope5: 25, rope10: 50, bounce: 10 };
+        if (meta[hasKey]) meta[activeKey] = !meta[activeKey];
+        else if (meta.credits >= costs[key]) { meta.credits -= costs[key]; meta[hasKey] = true; meta[activeKey] = true; }
+        updateGarageUI(); updateUIStrings(); saveStats();
+    };
+
+    window.upgrade = function(type) {
+        let cost = type === 'mass' ? 100 : 50;
+        if (meta.credits >= cost) { meta.credits -= cost; meta[type + 'Level']++; updateGarageUI(); saveStats(); }
+    }
+
+    window.startGame = function() {
+        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+        const ic = document.getElementById('ingame-controls'); if(ic) ic.classList.remove('hidden');
+        gameActive = true; canResume = false; score = 0; cameraY = 0; startY = height / 2;
+        player.mass = 1.2 - (meta.massLevel * 0.1); player.x = width / 2; player.y = startY;
+        player.vx = 0; player.vy = -8 / player.mass; player.angle = -Math.PI / 2;
+        player.attached = false; player.target = null; player.holdTime = 0; player.cooldownTime = 0;
+        objects = []; coins = []; fxParticles = [];
+        spawnObject(startY - 550, width / 2);
+        const spawnCount = meta.bounceActive ? 4 : 8, spacing = meta.bounceActive ? 2.0 : 1.0;
+        for(let i=0; i < spawnCount; i++) spawnObject(startY - 550 - ((i+1) * (450 * spacing)));
+    }
+
+    function spawnObject(y, fixedX = null) {
+        const r = 30 + Math.random() * 40, vCount = Math.floor(Math.random() * 6) + 5, vertices = [];
+        for (let i = 0; i < vCount; i++) { const a = (i / vCount) * Math.PI * 2, rad = r * (0.8 + Math.random() * 0.4); vertices.push({ x: Math.cos(a) * rad, y: Math.sin(a) * rad }); }
+        objects.push({ x: fixedX ?? (Math.random() * (width - 160) + 80), y, r, vertices, rotation: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.02 });
+        if (Math.random() > 0.9) coins.push({ x: Math.random() * (width - 60) + 30, y: y + (Math.random() - 0.5) * 300, r: 10, collected: false });
+    }
+
+    function gameOver(reasonKey = "impact") {
+        gameActive = false; canResume = false;
+        ['ingame-controls', 'rope-alert'].forEach(id => { const el = document.getElementById(id); if(el) el.classList.add('hidden'); });
+        const go = document.getElementById('game-over'); if(go) go.classList.remove('hidden');
+        const t = i18n[meta.language];
+        const rEl = document.getElementById('death-reason'), fEl = document.getElementById('final-score');
+        if(rEl) rEl.innerText = t[reasonKey];
+        if(fEl) fEl.innerText = `${t.hi}:${meta.highScore.toString().padStart(4, '0')} | ${t.cur}:${score.toString().padStart(4, '0')}`;
+        saveStats();
+    }
+
+    function spawnFx(x, y, vx, vy, size, life) { fxParticles.push({ x, y, vx, vy, size, life, maxLife: life }); }
+
+    function update(dt) {
+        if (!gameActive) return;
+        const t = i18n[meta.language], alertEl = document.getElementById('rope-alert');
+        if (player.cooldownTime > 0) {
+            player.cooldownTime -= dt;
+            if(alertEl) { alertEl.classList.remove('hidden'); alertEl.innerText = `${t.broken} ${(player.cooldownTime / 1000).toFixed(1)}`; }
+        } else if(alertEl) alertEl.classList.add('hidden');
+
+        player.vy += GRAVITY_CONSTANT; player.vx *= AIR_RESISTANCE; player.vy *= AIR_RESISTANCE;
+
+        if (player.attached && player.target) {
+            player.holdTime += dt;
+            if (player.holdTime >= ROPE_HOLD_LIMIT) { player.attached = false; player.cooldownTime = ROPE_COOLDOWN; }
+            else {
+                let dx = player.target.x - player.x, dy = player.target.y - player.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 5) {
+                    const nx = dx / dist, ny = dy / dist, vDotR = (player.vx * nx + player.vy * ny);
+                    if (vDotR < 0) { const s = 1.25 + (meta.ropeLevel * 0.05); player.vx -= nx * vDotR * s; player.vy -= ny * vDotR * s; if (player.vy > 0) { player.vy *= 0.985; player.vx += nx * 0.05; } }
+                    const aF = VELOCITY_MULTIPLIER + (0.003 * (1 / player.mass));
+                    player.vx *= aF; player.vy *= aF; player.vx += (ny) * (0.012 / player.mass); player.vy += (-nx) * (0.012 / player.mass);
+                }
+            }
+        }
+
+        player.x += player.vx; player.y += player.vy;
+        const speed = Math.hypot(player.vx, player.vy);
+
+        objects.forEach(o => {
+            const dx = player.x - o.x, dy = player.y - o.y, d = Math.hypot(dx, dy);
+            if (d < o.r + 15) { 
+                if (meta.bounceActive) {
+                    const nx = dx / d, ny = dy / d, dot = player.vx * nx + player.vy * ny;
+                    if (dot < 0) { player.vx -= 2.4 * dot * nx; player.vy -= 2.4 * dot * ny; player.vx *= 1.05; player.vy *= 1.05; if (player.attached) player.attached = false; screenShake = 12; }
+                } else if (speed > 8) { for(let i=0; i<3; i++) spawnFx(player.x, player.y, (Math.random()-0.5)*5, (Math.random()-0.5)*5, 2, 20); }
+            }
+        });
+
+        if (meta.bordersActive) {
+            if (player.x < 10) { player.x = 10; player.vx *= -0.6; if (player.attached) player.attached = false; }
+            else if (player.x > width - 10) { player.x = width - 10; player.vx *= -0.6; if (player.attached) player.attached = false; }
+        } else {
+            if (player.x < 0) { player.x += width; if (player.attached) { player.attached = false; player.target = null; } }
+            else if (player.x > width) { player.x -= width; if (player.attached) { player.attached = false; player.target = null; } }
+        }
+
+        fxParticles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life--; }); fxParticles = fxParticles.filter(p => p.life > 0);
+        coins.forEach(c => { if (!c.collected && Math.hypot(player.x - c.x, player.y - c.y) < c.r + 15) { c.collected = true; meta.credits += 1; } });
+        if (speed > 0.1) player.angle = Math.atan2(player.vy, player.vx);
+        cameraY += (player.y - height * (0.6 + Math.min(0.2, speed / 50)) - cameraY) * 0.08;
+        objects.forEach(o => o.rotation += o.rotSpeed);
+        objects = objects.filter(o => o.y > player.y - height); coins = coins.filter(c => !c.collected && c.y > player.y - height);
+        if (objects.length > 0 && objects[objects.length - 1].y > player.y - height) spawnObject(objects[objects.length - 1].y - (450 * (meta.bounceActive ? 2.0 : 1.0)));
+        score = Math.max(0, Math.floor((startY - player.y) / 10)); if (score > meta.highScore) meta.highScore = score;
+        if (player.y > startY + 100) gameOver("altitude");
+        const uiHi = document.getElementById('ui-hi'), uiCur = document.getElementById('ui-cur'), uiCred = document.getElementById('ui-cred'), uiVel = document.getElementById('ui-vel');
+        if(uiHi) uiHi.innerText = `${t.hi}:${meta.highScore.toString().padStart(4, '0')}`;
+        if(uiCur) uiCur.innerText = `${t.cur}:${score.toString().padStart(4, '0')}`;
+        if(uiCred) uiCred.innerText = `${t.cred}:${Math.floor(meta.credits).toString().padStart(4, '0')}`;
+        if(uiVel) uiVel.innerText = `${t.vel}:${speed.toFixed(2)}`;
+        if (screenShake > 0) screenShake *= 0.9;
+    }
+
+    function draw() {
+        const bodyStyle = getComputedStyle(document.body), fg = bodyStyle.getPropertyValue('--fg'), faint = bodyStyle.getPropertyValue('--faint'), bg = bodyStyle.getPropertyValue('--bg');
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, width, height);
+        ctx.save(); if (screenShake > 0.1) ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake); ctx.translate(0, -cameraY);
+        ctx.strokeStyle = faint; ctx.setLineDash([5, 10]); ctx.beginPath(); ctx.moveTo(0, startY + 30); ctx.lineTo(width, startY + 30); ctx.stroke(); ctx.setLineDash([]);
+        ctx.strokeStyle = fg; ctx.lineWidth = 1.5;
+        objects.forEach(o => { ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.rotation); ctx.beginPath(); o.vertices.forEach((v, idx) => idx === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, 1.5, 0, Math.PI * 2); ctx.fillStyle = fg; ctx.fill(); ctx.restore(); });
+        coins.forEach(c => { ctx.strokeStyle = fg; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(c.x, c.y - c.r * 0.6); ctx.lineTo(c.x, c.y + c.r * 0.6); ctx.stroke(); });
+        fxParticles.forEach(p => { ctx.globalAlpha = p.life / p.maxLife; ctx.fillStyle = fg; ctx.fillRect(p.x, p.y, p.size, p.size); }); ctx.globalAlpha = 1.0;
+        if (player.attached && player.target) {
+            const s = Math.hypot(player.vx, player.vy), tL = ROPE_HOLD_LIMIT - player.holdTime;
+            ctx.strokeStyle = (tL < 1000 && Math.floor(Date.now() / 100) % 2 === 0) ? "transparent" : fg;
+            ctx.setLineDash([Math.max(1, 5 - s/10), 5]); ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(player.target.x, player.target.y); ctx.stroke(); ctx.setLineDash([]);
+        }
+        ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.angle + Math.PI / 2); ctx.strokeStyle = fg; ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(8, 8); ctx.lineTo(-8, 8); ctx.closePath(); ctx.stroke();
+        const v = Math.hypot(player.vx, player.vy);
+        if (v > 12) { ctx.strokeStyle = fg; ctx.globalAlpha = 0.3; for(let i=0; i<3; i++) { const ox = (Math.random()-0.5)*20; ctx.beginPath(); ctx.moveTo(ox, 10); ctx.lineTo(ox, 10 + v*2); ctx.stroke(); } ctx.globalAlpha = 1.0; }
+        if (v > 3) { for(let i=0; i < Math.min(10, Math.floor(v / 1.1)); i++) { ctx.beginPath(); ctx.arc((Math.random() - 0.5) * 12, 10 + Math.random() * (v * 2), 1.2 + Math.random() * 1.3, 0, Math.PI * 2); ctx.fillStyle = fg; ctx.fill(); } }
+        ctx.restore();
+        if (meta.bordersActive) {
+            ctx.strokeStyle = fg; ctx.globalAlpha = player.x < 100 ? (1 - player.x/100) * 0.3 : (player.x > width - 100 ? (1 - (width-player.x)/100) * 0.3 : 0);
+            if (ctx.globalAlpha > 0) { ctx.beginPath(); const xLine = player.x < 100 ? 5 : width - 5; ctx.moveTo(xLine, player.y - 100); ctx.lineTo(xLine, player.y + 100); ctx.stroke(); }
+            ctx.globalAlpha = 1.0;
+        }
+        ctx.restore();
+    }
+
+    function gameLoop(t) { const dt = t - lastTime; lastTime = t; if (dt < 100) { update(dt); draw(); } requestAnimationFrame(gameLoop); }
+
+    const handleDown = () => {
+        if (!gameActive || player.attached || player.cooldownTime > 0) return;
+        let range = BASE_RANGE + (meta.ropeLevel * 60); if (meta.rope5Active) range += 55; if (meta.rope10Active) range += 110;
+        let nearest = null, minDist = range;
+        objects.forEach(o => { let d = Math.hypot(player.x - o.x, player.y - o.y); if (d < minDist) { minDist = d; nearest = o; } });
+        if (nearest) { player.attached = true; player.target = nearest; player.holdTime = 0; }
+    };
+
+    window.addEventListener('mousedown', handleDown);
+    window.addEventListener('mouseup', () => { if (player.attached) { player.attached = false; player.cooldownTime = 0; } });
+    window.addEventListener('touchstart', (e) => { e.preventDefault(); handleDown(); }, {passive: false});
+    window.addEventListener('touchend', (e) => { e.preventDefault(); if (player.attached) { player.attached = false; player.cooldownTime = 0; } }, {passive: false});
+    window.addEventListener('resize', resize);
+    resize(); applyTheme(); updateUIStrings(); requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
