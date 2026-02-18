@@ -38,7 +38,7 @@
             user-select: none;
             -webkit-tap-highlight-color: transparent;
             touch-action: none;
-            transition: background-color: 0.3s, color 0.3s;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         canvas { display: block; width: 100vw; height: 100vh; }
@@ -46,7 +46,7 @@
         #ui {
             position: absolute; top: 15px; left: 0; width: 100%;
             display: flex; flex-direction: row; justify-content: center; align-items: center;
-            gap: 12px; pointer-events: none; z-index: 10; font-size: 12px; letter-spacing: 1px;
+            gap: 12px; pointer-events: none; z-index: 10; font-size: 11px; letter-spacing: 1px;
             padding: 0 10px; box-sizing: border-box;
         }
         
@@ -80,10 +80,17 @@
             pointer-events: auto;
         }
 
+        /* Класс для активных кнопок */
+        button.active-setting {
+            font-weight: 900;
+            border-width: 2px;
+            text-shadow: 1px 0px 0px var(--fg); /* Эмуляция еще большей толщины для пиксельных шрифтов */
+        }
+
         button:active { background: var(--faint); }
         button:disabled { opacity: 0.3; cursor: default; }
 
-        .btn-small { width: auto; height: 38px; padding: 0 15px; font-size: 14px; pointer-events: auto; display: inline-flex; margin: 0; }
+        .btn-small { width: auto; height: 38px; padding: 0 15px; font-size: 14px; display: inline-flex; margin: 0; }
         .hidden { display: none !important; }
         
         .settings-row { 
@@ -107,6 +114,7 @@
         <div id="ui-cur">CUR:0000</div>
         <div id="ui-cred">CRED:0000</div>
         <div id="ui-vel">VEL:0.00</div>
+        <div id="ui-spd">SPD:1.0x</div>
     </div>
 
     <div id="rope-alert" class="hidden">BROKEN 3.0</div>
@@ -122,7 +130,7 @@
         <button onclick="window.startGame()">LAUNCH</button>
         <button onclick="window.showMods()">MODS</button>
         <button onclick="window.showSystems()">SYSTEMS</button>
-        <div id="stats-panel">MASS-VELOCITY ENGINE v7.2</div>
+        <div id="stats-panel">MASS-VELOCITY ENGINE v7.4</div>
     </div>
 
     <div id="mods-screen" class="screen hidden">
@@ -139,29 +147,41 @@
 
     <div id="systems-screen" class="screen hidden">
         <h1 id="systems-title">SYSTEMS</h1>
+        
         <div class="settings-row" style="border-top:none;">
             <div class="settings-label" id="lbl-theme">Appearance</div>
             <div class="btn-group-theme">
-                <button onclick="window.setTheme('dark')">DARK</button>
-                <button onclick="window.setTheme('light')">LIGHT</button>
-                <button onclick="window.setTheme('retro')" id="btn-toggle-retro">RETRO</button>
+                <button onclick="window.setTheme('dark')" id="btn-theme-dark">DARK</button>
+                <button onclick="window.setTheme('light')" id="btn-theme-light">LIGHT</button>
+                <button onclick="window.setTheme('retro')" id="btn-theme-retro">RETRO</button>
             </div>
         </div>
+
+        <div class="settings-row">
+            <div class="settings-label" id="lbl-speed">Speed</div>
+            <div class="btn-group-theme" id="speed-buttons">
+                <button onclick="window.setSpeed(1)" data-speed="1">1x</button>
+                <button onclick="window.setSpeed(1.5)" data-speed="1.5">1.5x</button>
+                <button onclick="window.setSpeed(2)" data-speed="2">2x</button>
+                <button onclick="window.setSpeed(3)" data-speed="3">3x</button>
+            </div>
+        </div>
+
         <div class="settings-row">
             <div class="settings-label" id="lbl-lang">Language</div>
-            <div class="lang-grid">
-                <button onclick="window.setLanguage('en')">EN</button>
-                <button onclick="window.setLanguage('ru')">RU</button>
-                <button onclick="window.setLanguage('de')">DE</button>
-                <button onclick="window.setLanguage('fr')">FR</button>
-                <button onclick="window.setLanguage('es')">ES</button>
-                <button onclick="window.setLanguage('it')">IT</button>
-                <button onclick="window.setLanguage('pt')">PT</button>
-                <button onclick="window.setLanguage('pl')">PL</button>
-                <button onclick="window.setLanguage('nl')">NL</button>
-                <button onclick="window.setLanguage('zh')">ZH</button>
-                <button onclick="window.setLanguage('ja')">JA</button>
-                <button onclick="window.setLanguage('ko')">KO</button>
+            <div class="lang-grid" id="lang-buttons">
+                <button onclick="window.setLanguage('en')" data-lang="en">EN</button>
+                <button onclick="window.setLanguage('ru')" data-lang="ru">RU</button>
+                <button onclick="window.setLanguage('de')" data-lang="de">DE</button>
+                <button onclick="window.setLanguage('fr')" data-lang="fr">FR</button>
+                <button onclick="window.setLanguage('es')" data-lang="es">ES</button>
+                <button onclick="window.setLanguage('it')" data-lang="it">IT</button>
+                <button onclick="window.setLanguage('pt')" data-lang="pt">PT</button>
+                <button onclick="window.setLanguage('pl')" data-lang="pl">PL</button>
+                <button onclick="window.setLanguage('nl')" data-lang="nl">NL</button>
+                <button onclick="window.setLanguage('zh')" data-lang="zh">ZH</button>
+                <button onclick="window.setLanguage('ja')" data-lang="ja">JA</button>
+                <button onclick="window.setLanguage('ko')" data-lang="ko">KO</button>
             </div>
         </div>
         <button onclick="window.showMenu()" id="btn-sys-back" style="margin-top: 20px; border-color: var(--faint);">BACK</button>
@@ -187,22 +207,22 @@
         highScore: 0, credits: 0, massLevel: 1, ropeLevel: 1, 
         hasBorders: false, hasRope5: false, hasRope10: false, hasBounce: false,
         bordersActive: false, rope5Active: false, rope10Active: false, bounceActive: false, 
-        retroActive: false, language: 'en', inverted: false 
+        retroActive: false, language: 'en', inverted: false, gameSpeed: 1.0 
     };
 
     const i18n = {
-        en: { hi: "HI", best: "BEST", cur: "CUR", cred: "CRED", vel: "VEL", menu: "MENU", resume: "RESUME", launch: "LAUNCH", systems: "SYSTEMS", mods: "MODS", upMass: "MASS [100]", upRope: "TENSILE [50]", upBorders: "BORDERS [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "BACK", reboot: "REBOOT", crashed: "// CRASHED", impact: "GROUND IMPACT", collision: "STRUCTURAL FAILURE", altitude: "ALTITUDE LOST", appearance: "Appearance", language: "Language", balance: "BALANCE", mass: "SHIP MASS", rope: "TENSILE", lvl: "LVL", broken: "BROKEN" },
-        ru: { hi: "РЕК", best: "РЕКОРД", cur: "ТЕК", cred: "КРЕД", vel: "СКОР", menu: "МЕНЮ", resume: "ПРОДОЛЖИТЬ", launch: "ЗАПУСК", systems: "СИСТЕМЫ", mods: "МОДЫ", upMass: "ВЕС [100]", upRope: "ТРОС [50]", upBorders: "ГРАНИЦЫ [25]", upBounce: "ПИНБОЛ [10]", upRetro: "RETRO", upRope5: "+5М [25]", upRope10: "+10М [50]", back: "НАЗАД", reboot: "РЕСТАРТ", crashed: "// ОТКАЗ", impact: "УДАР О ЗЕМЛЮ", collision: "РАЗРУШЕНИЕ КОРПУСА", altitude: "ПОТЕРЯ ВЫСОТЫ", appearance: "ВИД", language: "ЯЗЫК", balance: "БАЛАНС", mass: "МАССА", rope: "НАТЯЖЕНИЕ", lvl: "УР", broken: "ОБРЫВ" },
-        de: { hi: "BEST", best: "REKORD", cur: "AKT", cred: "KRED", vel: "GESCHW", menu: "MENÜ", resume: "WEITER", launch: "START", systems: "SYSTEME", mods: "MODS", upMass: "MASSE [100]", upRope: "ZUG [50]", upBorders: "RAND [25]", upBounce: "FLIPPER [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "ZURÜCK", reboot: "REBOOT", crashed: "// ABSTURZ", impact: "BODENKONTAKT", collision: "KOLLISION", altitude: "HÖHENVERLUST", appearance: "OPTIK", language: "SPRACHE", balance: "KONTO", mass: "MASSE", rope: "ZUG", lvl: "ST", broken: "DEFEKT" },
-        fr: { hi: "TOP", best: "SCORE", cur: "ACT", cred: "CRED", vel: "VIT", menu: "MENU", resume: "REPRENDRE", launch: "LANCER", systems: "SYSTÈMES", mods: "MODS", upMass: "MASSE [100]", upRope: "TENSION [50]", upBorders: "BORD [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "RETOUR", reboot: "REBOOT", crashed: "// ÉCHEC", impact: "IMPACT SOL", collision: "COLLISION", altitude: "PERТЕ D'ALTITUDE", appearance: "Apparence", language: "Langue", balance: "SOLDE", mass: "MASSE", rope: "TENSION", lvl: "NIV", broken: "ROMPU" },
-        es: { hi: "TOP", best: "RÉCORD", cur: "ACT", cred: "CRED", vel: "VEL", menu: "MENÚ", resume: "REANUDAR", launch: "LANЗАР", systems: "SISTEMAS", mods: "MODS", upMass: "MASA [100]", upRope: "TENSIÓN [50]", upBorders: "BORDE [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "VOLVER", reboot: "REINICIO", crashed: "// FALLO", impact: "IMPACTO SUELO", collision: "COLISIÓN", altitude: "PERDA ALTURA", appearance: "Apariencia", language: "Idioma", balance: "SALDO", mass: "MASA", rope: "TENSIÓN", lvl: "NIV", broken: "ROTO" },
-        it: { hi: "TOP", best: "RECORD", cur: "ATT", cred: "CRED", vel: "VEL", menu: "MENU", resume: "RIPRENDI", launch: "LANCIA", systems: "SISTEMI", mods: "MODS", upMass: "MASSA [100]", upRope: "TENSIO [50]", upBorders: "BORDI [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "INDIETRO", reboot: "REBOOT", crashed: "// GUASTO", impact: "IMPATTO SUOLO", collision: "COLLISIONE", altitude: "PERDITA QUOTA", appearance: "Aspetto", language: "Lingua", balance: "CONТО", mass: "MASSA", rope: "TENSIONE", lvl: "LIV", broken: "ROTTO" },
-        pt: { hi: "REC", best: "RECORDE", cur: "ATU", cred: "CRED", vel: "VEL", menu: "MENU", resume: "RETOMAR", launch: "LANÇAR", systems: "SISTEMAS", mods: "MODS", upMass: "MASSA [100]", upRope: "TENSÃO [50]", upBorders: "BORDA [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "VOLTAR", reboot: "REBOOT", crashed: "// FALHA", impact: "IMPACTO SOLO", collision: "COLISÃO", altitude: "PERDA ALTITUDE", appearance: "Aparência", language: "Idioma", balance: "SALDO", mass: "MASSA", rope: "TENSÃO", lvl: "NÍVEL", broken: "QUEBRADO" },
-        pl: { hi: "REK", best: "WYNIK", cur: "AKT", cred: "KRED", vel: "PRĘD", menu: "MENU", resume: "WZNAWIAJ", launch: "START", systems: "SYSTEMY", mods: "MODY", upMass: "MASA [100]", upRope: "LINA [50]", upBorders: "GRANICE [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "POWRÓT", reboot: "REBOOT", crashed: "// AWARIA", impact: "ZDERZENIE", collision: "KOLIZJA", altitude: "UTRATA WYSOK.", appearance: "Wygląd", language: "Język", balance: "SALDO", mass: "MASA", rope: "NAPIĘCIE", lvl: "POZ", broken: "ZERWANA" },
-        nl: { hi: "REC", best: "BESTE", cur: "HUI", cred: "CRED", vel: "SNEL", menu: "MENU", resume: "HERVATTEN", launch: "STARTEN", systems: "SYSTEMЕН", mods: "MODS", upMass: "MASSA [100]", upRope: "TOUW [50]", upBorders: "GRENS [25]", upBounce: "PINBALL EFFECT [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "TERUG", reboot: "REBOOT", crashed: "// CRASH", impact: "BODEM IMPACT", collision: "BOTSING", altitude: "HOOGTE VERLIES", appearance: "Uiterlijk", language: "Taal", balance: "SALDO", mass: "MASSA", rope: "SPANNING", lvl: "NIV", broken: "GEBROKEN" },
-        zh: { hi: "最高", best: "纪录", cur: "当前", cred: "积分", vel: "速度", menu: "菜单", resume: "继续", launch: "发射", systems: "系统", mods: "模组", upMass: "质量 [100]", upRope: "绳索 [50]", upBorders: "边框 [25]", upBounce: "弹球 [10]", upRetro: "RETRO", upRope5: "+5米 [25]", upRope10: "+10米 [50]", back: "返回", reboot: "重启", crashed: "// 崩溃", impact: "撞击地面", collision: "撞击", altitude: "高度丢失", appearance: "外观", language: "语言", balance: "余额", mass: "质量", rope: "张力", lvl: "等级", broken: "断裂" },
-        ja: { hi: "最高", best: "ベスト", cur: "現在", cred: "クレジット", vel: "速度", menu: "メニュー", resume: "再開", launch: "発射", systems: "システム", mods: "モッド", upMass: "質量 [100]", upRope: "ロープ [50]", upBorders: "シールド [25]", upBounce: "ピンボール [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "戻る", reboot: "再起動", crashed: "// 故障", impact: "地面衝突", collision: "衝突", altitude: "高度低下", appearance: "外見", language: "言語", balance: "残高", mass: "質量", rope: "張力", lvl: "レベル", broken: "切断" },
-        ko: { hi: "최고", best: "기록", cur: "현재", cred: "크레딧", vel: "속도", menu: "메뉴", resume: "계속하기", launch: "발사", systems: "시스템", mods: "모드", upMass: "질량 [100]", upRope: "로프 [50]", upBorders: "경계 [25]", upBounce: "핀볼 [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "뒤로", reboot: "재부팅", crashed: "// 실패", impact: "지면 충돌", collision: "충돌", altitude: "고도 상실", appearance: "외형", language: "언어", balance: "잔액", mass: "질량", rope: "장력", lvl: "레벨", broken: "끊어짐" }
+        en: { hi: "HI", best: "BEST", cur: "CUR", cred: "CRED", vel: "VEL", spd: "SPD", menu: "MENU", resume: "RESUME", launch: "LAUNCH", systems: "SYSTEMS", mods: "MODS", upMass: "MASS [100]", upRope: "TENSILE [50]", upBorders: "BORDERS [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "BACK", reboot: "REBOOT", crashed: "// CRASHED", impact: "GROUND IMPACT", collision: "STRUCTURAL FAILURE", altitude: "ALTITUDE LOST", appearance: "Appearance", language: "Language", balance: "BALANCE", mass: "SHIP MASS", rope: "TENSILE", lvl: "LVL", broken: "BROKEN", speed: "SPEED" },
+        ru: { hi: "РЕК", best: "РЕКОРД", cur: "ТЕК", cred: "КРЕД", vel: "СКОР", spd: "МНЖ", menu: "МЕНЮ", resume: "ПРОДОЛЖИТЬ", launch: "ЗАПУСК", systems: "СИСТЕМЫ", mods: "МОДЫ", upMass: "ВЕС [100]", upRope: "ТРОС [50]", upBorders: "ГРАНИЦЫ [25]", upBounce: "ПИНБОЛ [10]", upRetro: "RETRO", upRope5: "+5М [25]", upRope10: "+10М [50]", back: "НАЗАД", reboot: "РЕСТАРТ", crashed: "// ОТКАЗ", impact: "УДАР О ЗЕМЛЮ", collision: "РАЗРУШЕНИЕ КОРПУСА", altitude: "ПОТЕРЯ ВЫСОТЫ", appearance: "ВИД", language: "ЯЗЫК", balance: "БАЛАНС", mass: "МАССА", rope: "НАТЯЖЕНИЕ", lvl: "УР", broken: "ОБРЫВ", speed: "СКОРОСТЬ" },
+        de: { hi: "BEST", best: "REKORD", cur: "AKT", cred: "KRED", vel: "GESCHW", spd: "SPD", menu: "MENÜ", resume: "WEITER", launch: "START", systems: "SYSTEME", mods: "MODS", upMass: "MASSE [100]", upRope: "ZUG [50]", upBorders: "RAND [25]", upBounce: "FLIPPER [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "ZURÜCK", reboot: "REBOOT", crashed: "// ABSTURZ", impact: "BODENKONTAKT", collision: "KOLLISION", altitude: "HÖHENVERLUST", appearance: "OPTIK", language: "SPRACHE", balance: "KONTO", mass: "MASSE", rope: "ZUG", lvl: "ST", broken: "DEFEKT", speed: "TEMPO" },
+        fr: { hi: "TOP", best: "SCORE", cur: "ACT", cred: "CRED", vel: "VIT", spd: "VIT", menu: "MENU", resume: "REPRENDRE", launch: "LANCER", systems: "SYSTÈMES", mods: "MODS", upMass: "MASSE [100]", upRope: "TENSION [50]", upBorders: "BORD [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "RETOUR", reboot: "REBOOT", crashed: "// ÉCHEC", impact: "IMPACT SOL", collision: "COLLISION", altitude: "PERТЕ D'ALTITUDE", appearance: "Apparence", language: "Langue", balance: "SOLDE", mass: "MASSE", rope: "TENSION", lvl: "NIV", broken: "ROMPU", speed: "VITESSE" },
+        es: { hi: "TOP", best: "RÉCORD", cur: "ACT", cred: "CRED", vel: "VEL", spd: "VEL", menu: "MENÚ", resume: "REANUDAR", launch: "LANЗАР", systems: "SISTEMAS", mods: "MODS", upMass: "MASA [100]", upRope: "TENSIÓN [50]", upBorders: "BORDE [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "VOLVER", reboot: "REINICIO", crashed: "// FALLO", impact: "IMPACTO SUELO", collision: "COLISIÓN", altitude: "PERDA ALTURA", appearance: "Apariencia", language: "Idioma", balance: "SALDO", mass: "MASA", rope: "TENSIÓN", lvl: "NIV", broken: "ROTO", speed: "VELOCIDAD" },
+        it: { hi: "TOP", best: "RECORD", cur: "ATT", cred: "CRED", vel: "VEL", spd: "VEL", menu: "MENU", resume: "RIPRENDI", launch: "LANCIA", systems: "SISTEMI", mods: "MODS", upMass: "MASSA [100]", upRope: "TENSIO [50]", upBorders: "BORDI [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "INDIETRO", reboot: "REBOOT", crashed: "// GUASTO", impact: "IMPATTO SUOLO", collision: "COLLISIONE", altitude: "PERDITA QUOTA", appearance: "Aspetto", language: "Lingua", balance: "CONТО", mass: "MASSA", rope: "TENSIONE", lvl: "LIV", broken: "ROTTO", speed: "VELOCITÀ" },
+        pt: { hi: "REC", best: "RECORDE", cur: "ATU", cred: "CRED", vel: "VEL", spd: "VEL", menu: "MENU", resume: "RETOMAR", launch: "LANÇAR", systems: "SISTEMAS", mods: "MODS", upMass: "MASSA [100]", upRope: "TENSÃO [50]", upBorders: "BORDA [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5 METROS [25]", upRope10: "+10 METROS [50]", back: "VOLTAR", reboot: "REBOOT", crashed: "// FALHA", impact: "IMPACTO SOLO", collision: "COLISÃO", altitude: "PERDA ALTITUDE", appearance: "Aparência", language: "Idioma", balance: "SALDO", mass: "MASА", rope: "TENSÃO", lvl: "NÍVEL", broken: "QUEBRADO", speed: "VELOCIDADE" },
+        pl: { hi: "REK", best: "WYNIK", cur: "AKT", cred: "KRED", vel: "PRĘD", spd: "PRĘD", menu: "MENU", resume: "WZNAWIAJ", launch: "START", systems: "SYSTEMY", mods: "MODY", upMass: "MASA [100]", upRope: "LINA [50]", upBorders: "GRANICE [25]", upBounce: "PINBALL [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "POWRÓT", reboot: "REBOOT", crashed: "// AWARIA", impact: "ZDERZENIE", collision: "KOLIZJA", altitude: "UTRATA WYSOK.", appearance: "Wygląd", language: "Język", balance: "SALDO", mass: "MASA", rope: "NAPIĘCIE", lvl: "POZ", broken: "ZERWANA", speed: "PRĘDKOŚĆ" },
+        nl: { hi: "REC", best: "BESTE", cur: "HUI", cred: "CRED", vel: "SNEL", spd: "SNEL", menu: "MENU", resume: "HERVATTEN", launch: "STARTEN", systems: "SYSTEMЕН", mods: "MODS", upMass: "MASSA [100]", upRope: "TOUW [50]", upBorders: "GRENS [25]", upBounce: "PINBALL EFFECT [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "TERUG", reboot: "REBOOT", crashed: "// CRASH", impact: "BODEM IMPACT", collision: "BOTSING", altitude: "HOOGTE VERLIES", appearance: "Uiterlijk", language: "Taal", balance: "SALDO", mass: "MASSA", rope: "SPANNING", lvl: "NIV", broken: "GEBROKEN", speed: "SNELHEID" },
+        zh: { hi: "最高", best: "纪录", cur: "当前", cred: "积分", vel: "速度", spd: "倍速", menu: "菜单", resume: "继续", launch: "发射", systems: "系统", mods: "模组", upMass: "质量 [100]", upRope: "绳索 [50]", upBorders: "边框 [25]", upBounce: "弹球 [10]", upRetro: "RETRO", upRope5: "+5米 [25]", upRope10: "+10米 [50]", back: "返回", reboot: "重启", crashed: "// 崩溃", impact: "撞击地面", collision: "撞击", altitude: "高度丢失", appearance: "外观", language: "语言", balance: "余额", mass: "质量", rope: "张力", lvl: "等级", broken: "断裂", speed: "速度" },
+        ja: { hi: "最高", best: "ベスト", cur: "現在", cred: "クレジット", vel: "速度", spd: "倍速", menu: "メニュー", resume: "再開", launch: "發射", systems: "システム", mods: "モッド", upMass: "質量 [100]", upRope: "ロープ [50]", upBorders: "シールド [25]", upBounce: "ピンボール [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "戻る", reboot: "再起動", crashed: "// 故障", impact: "地面衝突", collision: "衝突", altitude: "高度低下", appearance: "外見", language: "言語", balance: "残高", mass: "質量", rope: "張力", lvl: "レベル", broken: "切断", speed: "速度" },
+        ko: { hi: "최고", best: "기록", cur: "현재", cred: "크레딧", vel: "속до", spd: "배속", menu: "메뉴", resume: "계속하기", launch: "발사", systems: "시스템", mods: "모드", upMass: "질량 [100]", upRope: "로프 [50]", upBorders: "경계 [25]", upBounce: "핀볼 [10]", upRetro: "RETRO", upRope5: "+5M [25]", upRope10: "+10M [50]", back: "뒤로", reboot: "재부팅", crashed: "// 실패", impact: "지면 충돌", collision: "충돌", altitude: "고도 상실", appearance: "외형", language: "언어", balance: "잔액", mass: "질량", rope: "장력", lvl: "레벨", broken: "끊어짐", speed: "속도" }
     };
 
     // --- 2. ENGINE CORE & UI METHODS ---
@@ -224,24 +244,54 @@
         if (window.meta.retroActive) body.classList.add('retro');
     };
 
-    window.setupToggleButton = function(key, btnId, originalText) {
-        const has = window.meta['has' + key.charAt(0).toUpperCase() + key.slice(1)];
-        const btn = document.getElementById(btnId);
-        if (btn) btn.innerText = has ? originalText.split('[')[0].trim() : originalText;
-    };
-
     window.updateUIStrings = function() {
         const t = i18n[window.meta.language];
-        const ids = { 'resume-btn': t.resume, 'btn-up-mass': t.upMass, 'btn-up-ropeTension': t.upRope, 'btn-up-back': t.back, 'btn-sys-back': t.back, 'over-title': t.crashed, 'mods-title': t.mods, 'systems-title': t.systems, 'lbl-theme': t.appearance, 'lbl-lang': t.language };
+        const ids = { 'resume-btn': t.resume, 'btn-up-mass': t.upMass, 'btn-up-ropeTension': t.upRope, 'btn-up-back': t.back, 'btn-sys-back': t.back, 'over-title': t.crashed, 'mods-title': t.mods, 'systems-title': t.systems, 'lbl-theme': t.appearance, 'lbl-lang': t.language, 'lbl-speed': t.speed };
         for (const [id, text] of Object.entries(ids)) { const el = document.getElementById(id); if(el) el.innerHTML = text; }
-        window.setupToggleButton('borders', 'btn-up-borders', t.upBorders);
-        window.setupToggleButton('rope5', 'btn-up-rope5', t.upRope5);
-        window.setupToggleButton('rope10', 'btn-up-rope10', t.upRope10);
-        window.setupToggleButton('bounce', 'btn-up-bounce', t.upBounce);
-        const retroBtn = document.getElementById('btn-toggle-retro'); if(retroBtn) retroBtn.innerText = t.upRetro;
+        
+        const setupBtn = (key, id, orig) => {
+            const has = window.meta['has' + key.charAt(0).toUpperCase() + key.slice(1)];
+            const active = window.meta[key + 'Active'];
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.innerText = has ? orig.split('[')[0].trim() : orig;
+                // Сделать активные моды жирными
+                if (has && active) btn.classList.add('active-setting');
+                else btn.classList.remove('active-setting');
+            }
+        };
+
+        setupBtn('borders', 'btn-up-borders', t.upBorders);
+        setupBtn('rope5', 'btn-up-rope5', t.upRope5);
+        setupBtn('rope10', 'btn-up-rope10', t.upRope10);
+        setupBtn('bounce', 'btn-up-bounce', t.upBounce);
+        
         window.updateMenuBest();
         window.updateGarageUI();
+        window.updateActiveStates(); // Обновление жирных кнопок
+
         const btnPause = document.querySelector('#ingame-controls button'); if(btnPause) btnPause.innerText = `// ${t.menu}`;
+        const spdEl = document.getElementById('ui-spd'); if(spdEl) spdEl.innerText = `${t.spd}:${window.meta.gameSpeed.toFixed(1)}x`;
+    };
+
+    // Функция для управления жирностью кнопок настроек
+    window.updateActiveStates = function() {
+        // Темы
+        document.getElementById('btn-theme-dark').classList.toggle('active-setting', !window.meta.inverted && !window.meta.retroActive);
+        document.getElementById('btn-theme-light').classList.toggle('active-setting', window.meta.inverted);
+        document.getElementById('btn-theme-retro').classList.toggle('active-setting', window.meta.retroActive);
+
+        // Скорость
+        document.querySelectorAll('#speed-buttons button').forEach(btn => {
+            const s = parseFloat(btn.getAttribute('data-speed'));
+            btn.classList.toggle('active-setting', s === window.meta.gameSpeed);
+        });
+
+        // Язык
+        document.querySelectorAll('#lang-buttons button').forEach(btn => {
+            const l = btn.getAttribute('data-lang');
+            btn.classList.toggle('active-setting', l === window.meta.language);
+        });
     };
 
     window.updateMenuBest = function() { const t = i18n[window.meta.language]; const el = document.getElementById('menu-best-container'); if(el) el.innerText = `${t.best}: ${window.meta.highScore.toString().padStart(4, '0')}`; };
@@ -249,22 +299,14 @@
 
     window.setLanguage = function(l) { window.meta.language = l; window.updateUIStrings(); saveStats(); };
 
-    // УНИФИЦИРОВАННАЯ ФУНКЦИЯ ДЛЯ ТЕМ (DARK, LIGHT, RETRO)
     window.setTheme = function(type) {
-        if (type === 'dark') {
-            window.meta.inverted = false;
-            window.meta.retroActive = false;
-        } else if (type === 'light') {
-            window.meta.inverted = true;
-            window.meta.retroActive = false;
-        } else if (type === 'retro') {
-            window.meta.inverted = false;
-            window.meta.retroActive = true;
-        }
-        window.applyTheme();
-        window.updateUIStrings();
-        saveStats();
+        if (type === 'dark') { window.meta.inverted = false; window.meta.retroActive = false; }
+        else if (type === 'light') { window.meta.inverted = true; window.meta.retroActive = false; }
+        else if (type === 'retro') { window.meta.inverted = false; window.meta.retroActive = true; }
+        window.applyTheme(); window.updateUIStrings(); saveStats();
     };
+
+    window.setSpeed = function(val) { window.meta.gameSpeed = val; window.updateUIStrings(); saveStats(); };
 
     window.showMenu = function() { gameActive = false; document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); document.getElementById('ingame-controls').classList.add('hidden'); document.getElementById('menu').classList.remove('hidden'); document.getElementById('rope-alert').classList.add('hidden'); const r = document.getElementById('resume-btn'); if(canResume && r) r.classList.remove('hidden'); window.updateMenuBest(); };
     window.showMods = function() { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); document.getElementById('mods-screen').classList.remove('hidden'); window.updateGarageUI(); window.updateUIStrings(); };
@@ -278,12 +320,12 @@
         const costs = { borders: 25, rope5: 25, rope10: 50, bounce: 10 };
         if (window.meta[hasKey]) window.meta[activeKey] = !window.meta[activeKey];
         else if (window.meta.credits >= costs[key]) { window.meta.credits -= costs[key]; window.meta[hasKey] = true; window.meta[activeKey] = true; }
-        window.updateGarageUI(); window.updateUIStrings(); saveStats();
+        window.updateUIStrings(); saveStats();
     };
 
     window.upgrade = function(type) {
         let cost = type === 'mass' ? 100 : 50;
-        if (window.meta.credits >= cost) { window.meta.credits -= cost; window.meta[type + 'Level']++; window.updateGarageUI(); saveStats(); }
+        if (window.meta.credits >= cost) { window.meta.credits -= cost; window.meta[type + 'Level']++; window.updateUIStrings(); saveStats(); }
     };
 
     window.startGame = function() {
@@ -295,8 +337,8 @@
         player.attached = false; player.target = null; player.holdTime = 0; player.cooldownTime = 0;
         objects = []; coins = []; fxParticles = [];
         spawnObject(startY - 550, width / 2);
-        const spawnCount = window.meta.bounceActive ? 4 : 8, spacing = window.meta.bounceActive ? 2.0 : 1.0;
-        for(let i=0; i < spawnCount; i++) spawnObject(startY - 550 - ((i+1) * (450 * spacing)));
+        const spawnCount = window.meta.bounceActive ? 6 : 12, spacing = window.meta.bounceActive ? 2.0 : 1.0;
+        for(let i=0; i < spawnCount; i++) spawnObject(startY - 550 - ((i+1) * (300 * spacing)));
     };
 
     function spawnObject(y, fixedX = null) {
@@ -363,7 +405,7 @@
         cameraY += (player.y - height * (0.6 + Math.min(0.2, speed / 50)) - cameraY) * 0.08;
         objects.forEach(o => o.rotation += o.rotSpeed);
         objects = objects.filter(o => o.y > player.y - height); coins = coins.filter(c => !c.collected && c.y > player.y - height);
-        if (objects.length > 0 && objects[objects.length - 1].y > player.y - height) spawnObject(objects[objects.length - 1].y - (450 * (window.meta.bounceActive ? 2.0 : 1.0)));
+        if (objects.length > 0 && objects[objects.length - 1].y > player.y - height) spawnObject(objects[objects.length - 1].y - (300 * (window.meta.bounceActive ? 2.0 : 1.0)));
         score = Math.max(0, Math.floor((startY - player.y) / 10)); if (score > window.meta.highScore) window.meta.highScore = score;
         if (player.y > startY + 100) gameOver("altitude");
         const uiHi = document.getElementById('ui-hi'), uiCur = document.getElementById('ui-cur'), uiCred = document.getElementById('ui-cred'), uiVel = document.getElementById('ui-vel');
@@ -402,7 +444,12 @@
         ctx.restore();
     }
 
-    function gameLoop(t) { const dt = t - lastTime; lastTime = t; if (dt < 100) { update(dt); draw(); } requestAnimationFrame(gameLoop); }
+    function gameLoop(t) { 
+        const dt = (t - lastTime) * window.meta.gameSpeed; 
+        lastTime = t; 
+        if (dt < 300) { update(dt); draw(); } 
+        requestAnimationFrame(gameLoop); 
+    }
 
     const handleDown = () => {
         if (!gameActive || player.attached || player.cooldownTime > 0) return;
