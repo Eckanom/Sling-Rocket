@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { GameEngine } from './services/gameEngine';
 import { loadGameData, saveGameData } from './services/storageService';
 import { I18N, getModCost } from './constants';
-import { GameMeta, ViewState, Language } from './types';
+import { GameMeta, ViewState } from './types';
 import { MenuScreen } from './components/MenuScreen';
 import { ModsScreen } from './components/ModsScreen';
 import { SystemsScreen } from './components/SystemsScreen';
