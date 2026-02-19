@@ -1,0 +1,5 @@
+{
+  "name": "Sling Rocket: Physics Edition",
+  "description": "A minimalist physics-based arcade game optimized for mobile. Swing from anchor points, collect credits, and upgrade your ship.",
+  "requestFramePermissions": []
+}
